@@ -32,7 +32,7 @@ coverage.xml
 htmlcov/
 consul.exe
 .kilo
-
+nginx.exe
 # */migrations/*
 # !*/migrations/__init__.py
 
