@@ -44,7 +44,7 @@ check_settings.py
 .idea/
 *.swp
 *.swo
-
+*.exe
 .DS_Store
 Thumbs.db
 
