@@ -1,0 +1,74 @@
+### ====================== AUTH SERVICE TESTS ======================
+
+### 1. Register New User
+POST http://127.0.0.1:8000/api/auth/register/
+Content-Type: application/json
+
+{
+  "email": "rania@test.com",
+  "nom": "Rania",
+  "prenom": "Test",
+  "password": "12345678",
+  "age": 25,
+  "town": "Annaba",
+  "gender": "F",
+  "social_link": "https://en.wikipedia.org/wiki/Li_Fangwei",
+  "pref_age_min": 22,
+  "pref_age_max": 30,
+  "pref_gender": "F",
+  "hobbies": ["Hiking","Reading"]
+}
+
+### 1b. Register Another User
+POST http://127.0.0.1:8000/api/auth/register/
+Content-Type: application/json
+
+{
+  "email": "anes@test.com",
+  "nom": "Loubar",
+  "prenom": "Anes",
+  "password": "12345678",
+  "age": 25,
+  "town": "Annaba",
+  "gender": "M",
+  "social_link": "https://en.wikipedia.org/wiki/Li_Fangwei",
+  "pref_age_min": 22,
+  "pref_age_max": 30,
+  "pref_gender": "F",
+  "hobbies": ["Hiking","Reading"]
+}
+
+### 2. Login
+POST http://127.0.0.1:8000/api/auth/login/
+Content-Type: application/json
+
+{
+  "email": "rania@test.com",
+  "password": "12345678"
+}
+
+### 2b. Login Another User
+POST http://127.0.0.1:8000/api/auth/login/
+Content-Type: application/json
+
+{
+  "email": "anes@test.com",
+  "password": "12345678"
+}
+
+### 3. Logout (copy access token from login response)
+POST http://127.0.0.1:8000/api/auth/logout/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "refresh": "{{refresh_token}}"
+}
+
+### 4. Refresh Token
+POST http://127.0.0.1:8000/api/auth/token/refresh/
+Content-Type: application/json
+
+{
+  "refresh": "{{refresh_token}}"
+}
