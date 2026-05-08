@@ -1,0 +1,228 @@
+version: "3.9"
+
+networks:
+  projetaos-network:
+    driver: bridge
+
+services:
+
+  db_auth:
+    image: postgres:15
+    networks:
+      - projetaos-network
+    environment:
+      POSTGRES_DB: projetaos_auth
+      POSTGRES_USER: aot_user
+      POSTGRES_PASSWORD: aot_pass123
+    volumes:
+      - db_auth_data:/var/lib/postgresql/data
+
+  db_users:
+    image: postgres:15
+    networks:
+      - projetaos-network
+    environment:
+      POSTGRES_DB: projetaos_users
+      POSTGRES_USER: matching_user
+      POSTGRES_PASSWORD: match123
+    volumes:
+      - db_users_data:/var/lib/postgresql/data
+
+  db_matching:
+    image: postgres:15
+    networks:
+      - projetaos-network
+    environment:
+      POSTGRES_DB: projetaos_matching
+      POSTGRES_USER: matching_user
+      POSTGRES_PASSWORD: match123
+    volumes:
+      - db_matching_data:/var/lib/postgresql/data
+
+  db_notifications:
+    image: postgres:15
+    networks:
+      - projetaos-network
+    environment:
+      POSTGRES_DB: projetaos_notifications
+      POSTGRES_USER: matching_user
+      POSTGRES_PASSWORD: match123
+    volumes:
+      - db_notifications_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    networks:
+      - projetaos-network
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  auth_service:
+    build: ./auth_service
+    networks:
+      - projetaos-network
+    ports:
+      - "8000:8000"
+    environment:
+      DB_NAME: projetaos_auth
+      DB_USER: aot_user
+      DB_PASSWORD: aot_pass123
+      DB_HOST: db_auth
+      DB_PORT: 5432
+      JWT_SECRET_KEY: django-insecure--snsecretkey
+      USER_SERVICE_URL: http://user_service:8001
+    depends_on:
+      - db_auth
+
+  user_service:
+    build: ./user_service
+    networks:
+      - projetaos-network
+    ports:
+      - "8001:8001"
+    environment:
+      DB_NAME: projetaos_users
+      DB_USER: matching_user
+      DB_PASSWORD: match123
+      DB_HOST: db_users
+      DB_PORT: 5432
+      JWT_SECRET_KEY: django-insecure--snsecretkey
+    depends_on:
+      - db_users
+
+  matching_service:
+    build: ./matching_service
+    networks:
+      - projetaos-network
+    ports:
+      - "8002:8002"
+    environment:
+      DB_NAME: projetaos_matching
+      DB_USER: matching_user
+      DB_PASSWORD: match123
+      DB_HOST: db_matching
+      DB_PORT: 5432
+      JWT_SECRET_KEY: django-insecure--snsecretkey
+      USER_SERVICE_URL: http://user_service:8001
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - db_matching
+      - rabbitmq
+
+  matching_service_2:
+    build: ./matching_service
+    networks:
+      - projetaos-network
+    ports:
+      - "8012:8002"
+    environment:
+      DB_NAME: projetaos_matching
+      DB_USER: matching_user
+      DB_PASSWORD: match123
+      DB_HOST: db_matching
+      DB_PORT: 5432
+      JWT_SECRET_KEY: django-insecure--snsecretkey
+      USER_SERVICE_URL: http://user_service:8001
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - db_matching
+      - rabbitmq
+
+  notification_service:
+    build: ./notification_service
+    networks:
+      - projetaos-network
+    ports:
+      - "8003:8003"
+    environment:
+      DB_NAME: projetaos_notifications
+      DB_USER: matching_user
+      DB_PASSWORD: match123
+      DB_HOST: db_notifications
+      DB_PORT: 5432
+      JWT_SECRET_KEY: django-insecure--snsecretkey
+      USER_SERVICE_URL: http://user_service:8001
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - db_notifications
+      - rabbitmq
+
+  consumer:
+    build: ./notification_service
+    networks:
+      - projetaos-network
+    command: python notifications/consumer.py
+    environment:
+      DB_NAME: projetaos_notifications
+      DB_USER: matching_user
+      DB_PASSWORD: match123
+      DB_HOST: db_notifications
+      DB_PORT: 5432
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - db_notifications
+      - rabbitmq
+
+  traefik:
+    image: traefik:v3.0
+    networks:
+      - projetaos-network
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - ./routes.yml:/routes.yml
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--entrypoints.web.address=:80"
+      - "--providers.file.filename=/routes.yml"
+      - "--providers.file.watch=true"
+    depends_on:
+      - auth_service
+      - user_service
+      - matching_service
+      - matching_service_2
+      - notification_service
+
+  consul:
+    image: consul:1.15
+    networks:
+      - projetaos-network
+    ports:
+      - "8501:8500"
+    command: agent -dev -ui -client=0.0.0.0
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - projetaos-network
+    ports:
+      - "6379:6379"
+
+  prometheus:
+    image: prom/prometheus:latest
+    networks:
+      - projetaos-network
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    networks:
+      - projetaos-network
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+    depends_on:
+      - prometheus
+
+volumes:
+  db_auth_data:
+  db_users_data:
+  db_matching_data:
+  db_notifications_data:

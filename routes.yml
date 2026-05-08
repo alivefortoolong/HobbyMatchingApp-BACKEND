@@ -1,0 +1,79 @@
+﻿http:
+
+  middlewares:
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+
+    cors-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PATCH
+          - OPTIONS
+        accessControlAllowOriginList:
+          - "*"
+        accessControlAllowHeaders:
+          - "*"
+        accessControlMaxAge: 100
+
+  routers:
+    auth-router:
+      rule: 'PathPrefix("/api/auth/")'
+      service: auth-service
+      entryPoints:
+        - web
+      middlewares:
+        - rate-limit
+        - cors-headers
+
+    user-router:
+      rule: 'PathPrefix("/api/users/")'
+      service: user-service
+      entryPoints:
+        - web
+      middlewares:
+        - rate-limit
+        - cors-headers
+
+    matching-router:
+      rule: 'PathPrefix("/api/matching/")'
+      service: matching-service
+      entryPoints:
+        - web
+      middlewares:
+        - rate-limit
+        - cors-headers
+
+    notification-router:
+      rule: 'PathPrefix("/api/notifications/")'
+      service: notification-service
+      entryPoints:
+        - web
+      middlewares:
+        - rate-limit
+        - cors-headers
+
+  services:
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: "http://auth_service:8000"
+
+    user-service:
+      loadBalancer:
+        servers:
+          - url: "http://user_service:8001"
+
+    matching-service:
+      loadBalancer:
+        servers:
+          - url: "http://matching_service:8002"
+          - url: "http://matching_service_2:8002"
+
+    notification-service:
+      loadBalancer:
+        servers:
+          - url: "http://notification_service:8003"
